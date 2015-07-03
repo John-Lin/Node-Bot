@@ -24,6 +24,7 @@
   "dependencies": {
     "irc": "^0.3.12",
     "portscanner": "^1.0.0",
+    "randomstring": "^1.0.7",
     "wget-improved": "^1.0.1"
   }
 }

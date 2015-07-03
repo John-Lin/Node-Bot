@@ -1,6 +1,8 @@
 var irc = require('irc');
 var util = require('util');
 var os = require('os');
+
+var randomstring = require('randomstring');
 var portscanner = require('portscanner');
 var wget = require('wget-improved');
 
@@ -9,9 +11,10 @@ var formatUtils = require('./lib/format-utils');
 var config = require('./config');
 
 var listenMode = false
+var nickName = config.nickname || 'nbot_' + randomstring.generate(4);
 
-var bot = new irc.Client('irc.freenode.net', config.nickname, {
-  debug: false,
+var bot = new irc.Client('irc.freenode.net', nickName, {
+  debug: true,
   channels: config.channels
 });
 

@@ -1,7 +1,9 @@
 var irc = require('irc');
 var util = require('util');
 var os = require('os');
+var dns = require('dns');
 
+var iputils = require('ip');
 var randomstring = require('randomstring');
 var portscanner = require('portscanner');
 var wget = require('wget-improved');
@@ -9,6 +11,8 @@ var wget = require('wget-improved');
 var netUtils = require('./lib/net-utils');
 var formatUtils = require('./lib/format-utils');
 var config = require('./config');
+
+var VERSION = '0.0.1'
 
 var listenMode = false
 var nickName = config.nickname || 'nbot_' + randomstring.generate(4);
@@ -50,7 +54,10 @@ bot.addListener('message#hsnl.bots', function(from, message) {
 
   } else if (message.match(/^\!netinfo$/) && listenMode) {
     var upNetworkInterfaces = Object.keys(os.networkInterfaces()).toString();
-    var netInfo = util.format('MAC address: %s; IP address: %s', netUtils.getMAC(), netUtils.getIPv4Internal());
+    var netInfo = util.format('MAC address: %s; IP address: %s',
+                                netUtils.getMAC(),
+                                iputils.address()
+                              );
 
     // bot.say('#hsnl.bots', 'About Network interfaces info.: ' + upNetworkInterfaces);
 
@@ -68,7 +75,9 @@ bot.addListener('message#hsnl.bots', function(from, message) {
       if (port < 65536 && port >= 0) {
         portscanner.checkPortStatus(port, ip, function(error, status) {
           // console.log(status);
-          bot.say('#hsnl.bots',  ip + ':' + matched[2] + ' Port status: ' + status);
+          bot.say('#hsnl.bots',
+            ip + ':' + matched[2] + ' Port status: ' + status
+          );
         });
       } else { bot.say('#hsnl.bots', 'Invalid port number!'); }
     } else { bot.say('#hsnl.bots', 'Invalid IP address!'); }
@@ -77,7 +86,7 @@ bot.addListener('message#hsnl.bots', function(from, message) {
     var matched = /^\!download (.*?) (.*?) (.*?)$/.exec(message);
     console.log(matched);
 
-    var action = parseInt(matched[3]);
+    var action = matched[3];
     var output =  matched[2] ;
     var url = matched[1];
 
@@ -90,8 +99,33 @@ bot.addListener('message#hsnl.bots', function(from, message) {
 
     download.on('end', function(output) {
       console.log(output);
-      bot.say('#hsnl.bots', output);
+      bot.say('#hsnl.bots', 'Sace to ' + output);
     });
+  } else if (message.match(/^\!about$/)) {
+    bot.say('#hsnl.bots',
+      'nbot version ' + VERSION + ' by [John-Lin] (linton.tw@gmail.com).'
+    );
+  } else if (message.match(/^\!dns (.*?)$/)) {
+    var matched = /^\!dns (.*?)$/.exec(message);
+    var host = matched[1];
+    dns.lookup(host, function(err, ip, fam) {
+      if (err) {
+        bot.say('#hsnl.bots', err);
+      }
+
+      bot.say('#hsnl.bots', ip);
+    });
+  } else if (message.match(/^\!udp (.*?) (.*?) (.*?)$/)) {
+    var matched = /^\!udp (.*?) (.*?) (.*?)$/.exec(message);
+    var pktSize = matched[3];
+    var pktNum =  matched[2];
+    var host = matched[1];
+
+    netUtils.sendUDP(host, pktNum, pktSize);
+
+    bot.say('#hsnl.bots',
+      'Sending ' + pktNum + ' udp packets to: ' + host + '. packet size: ' + pktSize + 'byte.'
+    );
   }
 
 });

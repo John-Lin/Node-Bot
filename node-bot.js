@@ -37,14 +37,14 @@ bot.addListener('message#hsnl.bots', function(from, message) {
     bot.say('#hsnl.bots', '<Bot quit listen mode>');
   }
 
-  if (message.match(/hello/i) && listenMode) {
+  if (message.match(/^\!hello$/) && listenMode) {
     bot.say('#hsnl.bots', 'Hello there ' + from);
 
   } else if (message.match(/^\!sysinfo$/) && listenMode) {
     var totalMem = os.totalmem() / (2 << 19);
     var freeMem =  os.freemem() / (2 << 19);
     var upTime =  formatUtils.secondsToString(os.uptime());
-    var cpuInfo = os.cpus()[0].model + ' x' + os.cpus().length.toString() + ' Cores';
+    var cpuInfo = os.cpus()[0].model;
     var osTypeArch = os.type() + ' ' + os.arch();
 
     var sysInfo = util.format('cpu: %s; ram: %sMB total, %sMB free; os: %s; uptime: %s.',
@@ -54,27 +54,19 @@ bot.addListener('message#hsnl.bots', function(from, message) {
 
   } else if (message.match(/^\!netinfo$/) && listenMode) {
     var upNetworkInterfaces = Object.keys(os.networkInterfaces()).toString();
-    var netInfo = util.format('MAC address: %s; IP address: %s',
-                                netUtils.getMAC(),
-                                iputils.address()
-                              );
 
-    // bot.say('#hsnl.bots', 'About Network interfaces info.: ' + upNetworkInterfaces);
-
-    bot.say('#hsnl.bots', netInfo);
+    bot.say('#hsnl.bots', 'IP address: ' + iputils.address());
 
   } else if (message.match(/^\!scan (.*?) (.*?)$/)) {
     var matched = /^\!scan (.*?) (.*?)$/.exec(message);
 
     // bot.say('#hsnl.bots', 'scan <IP> <port>');
-    // console.log(matched);
     var port = parseInt(matched[2]);
     var ip =  matched[1];
 
     if (netUtils.isIPv4(ip)) {
       if (port < 65536 && port >= 0) {
         portscanner.checkPortStatus(port, ip, function(error, status) {
-          // console.log(status);
           bot.say('#hsnl.bots',
             ip + ':' + matched[2] + ' Port status: ' + status
           );

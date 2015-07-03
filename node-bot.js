@@ -95,14 +95,3 @@ bot.addListener('message#hsnl.bots', function(from, message) {
   }
 
 });
-
-function changeMode(msg) {
-  if (msg.match(/^\:set listen$/)) {
-    bot.say('#hsnl.bots', '<Bot in listen mode>');
-    return true;
-  } else if (msg.match(/^\:set nolisten$/)) {
-    bot.say('#hsnl.bots', '<Bot quit listen mode>');
-    return false;
-  }
-
-}

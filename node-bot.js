@@ -60,21 +60,21 @@ bot.addListener('message#hsnl.bots', function(from, message) {
   } else if (message.match(/^\!scan (.*?) (.*?)$/)) {
     var matched = /^\!scan (.*?) (.*?)$/.exec(message);
 
-    // bot.say('#hsnl.bots', 'scan <IP> <port>');
-    var port = parseInt(matched[2]);
+    var port = matched[2];
     var ip =  matched[1];
 
-    if (netUtils.isIPv4(ip)) {
-      if (port < 65536 && port >= 0) {
-        portscanner.checkPortStatus(port, ip, function(error, status) {
-          bot.say('#hsnl.bots',
-            ip + ':' + matched[2] + ' Port status: ' + status
-          );
-        });
-      } else { bot.say('#hsnl.bots', 'Invalid port number!'); }
-    } else { bot.say('#hsnl.bots', 'Invalid IP address!'); }
+    portscanner.checkPortStatus(port, ip, function(error, status) {
+      if (error) {
+        bot.say('#hsnl.bots', 'Invalid parameters.');
+        return
+      }
 
-  } else if (message.match(/^\!download (.*?) (.*?) (.*?)$/)) {
+      bot.say('#hsnl.bots',
+        ip + ':' + matched[2] + ' Port status: ' + status
+      );
+    });
+
+  } else if (message.match(/^\!download (.*?) (.*?) (.*?)$/) && listenMode) {
     var matched = /^\!download (.*?) (.*?) (.*?)$/.exec(message);
     console.log(matched);
 
@@ -87,31 +87,39 @@ bot.addListener('message#hsnl.bots', function(from, message) {
     download.on('error', function(err) {
       console.log(err);
       bot.say('#hsnl.bots', err);
+      return
     });
 
     download.on('end', function(output) {
       console.log(output);
-      bot.say('#hsnl.bots', 'Sace to ' + output);
+      bot.say('#hsnl.bots', 'Save to ' + output);
     });
-  } else if (message.match(/^\!about$/)) {
+  } else if (message.match(/^\!about$/) && listenMode) {
     bot.say('#hsnl.bots',
       'nbot version ' + VERSION + ' by [John-Lin] (linton.tw@gmail.com).'
     );
-  } else if (message.match(/^\!dns (.*?)$/)) {
+  } else if (message.match(/^\!dns (.*?)$/) && listenMode) {
     var matched = /^\!dns (.*?)$/.exec(message);
     var host = matched[1];
     dns.lookup(host, function(err, ip, fam) {
       if (err) {
-        bot.say('#hsnl.bots', err);
+        bot.say('#hsnl.bots', 'Error message: ' + err);
+        return
       }
 
       bot.say('#hsnl.bots', ip);
     });
-  } else if (message.match(/^\!udp (.*?) (.*?) (.*?)$/)) {
+  } else if (message.match(/^\!udp (.*?) (.*?) (.*?)$/) && listenMode) {
     var matched = /^\!udp (.*?) (.*?) (.*?)$/.exec(message);
-    var pktSize = matched[3];
-    var pktNum =  matched[2];
+
+    var pktSize = parseInt(matched[3], 10);
+    var pktNum =  parseInt(matched[2], 10);
     var host = matched[1];
+
+    if (isNaN(pktSize) || isNaN(pktNum) || !netUtils.isIPv4(host)) {
+      bot.say('#hsnl.bots', 'Invalid parameters.');
+      return
+    }
 
     netUtils.sendUDP(host, pktNum, pktSize);
 

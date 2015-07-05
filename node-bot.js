@@ -12,10 +12,21 @@ var netUtils = require('./lib/net-utils');
 var formatUtils = require('./lib/format-utils');
 var config = require('./config');
 
-var VERSION = '0.0.1'
+var VERSION = '0.0.2'
 
 var listenMode = false
 var nickName = config.nickname || 'nbot_' + randomstring.generate(4);
+
+var cmdSetlistenRe = /^\:set listen$/;
+var cmdSetnolistenRe = /^\:set nolisten$/;
+var cmdHelloRe = /^\!hello$/;
+var cmdSysinfoRe = /^\!sysinfo$/;
+var cmdNetinfoRe = /^\!netinfo$/;
+var cmdScanRe = /^\!scan (.*?) (.*?)$/;
+var cmdDownloadRe = /^\!download (.*?) (.*?) (.*?)$/;
+var cmdAboutRe = /^\!about$/;
+var cmdDnsRe = /^\!dns (.*?)$/;
+var cmdUdpRe = /^\!udp (.*?) (.*?) (.*?)$/;
 
 var bot = new irc.Client('irc.freenode.net', nickName, {
   debug: true,
@@ -28,19 +39,30 @@ bot.addListener('error', function(message) {
 
 bot.addListener('message#hsnl.bots', function(from, message) {
   console.log(from + ' => #hsnl.bots: ' + message);
+  var isValidCmdSetlisten = cmdSetlistenRe.test(message);
+  var isValidCmdSetnolisten = cmdSetnolistenRe.test(message);
 
-  if (message.match(/^\:set listen$/)) {
+  if (isValidCmdSetlisten) {
     listenMode = true;
     bot.say('#hsnl.bots', '<Bot in listen mode>');
-  } else if (message.match(/^\:set nolisten$/)) {
+  } else if (isValidCmdSetnolisten) {
     listenMode = false;
     bot.say('#hsnl.bots', '<Bot quit listen mode>');
   }
 
-  if (message.match(/^\!hello$/) && listenMode) {
+  var isValidCmdHello = cmdHelloRe.test(message) && listenMode;
+  var isValidCmdSysinfo = cmdSysinfoRe.test(message) && listenMode;
+  var isValidCmdNetinfo = cmdNetinfoRe.test(message) && listenMode;
+  var isValidCmdScan = cmdScanRe.test(message) && listenMode;
+  var isValidCmdDownload = cmdDownloadRe.test(message) && listenMode;
+  var isValidCmdAbout = cmdAboutRe.test(message) && listenMode;
+  var isValidCmdDns = cmdDnsRe.test(message) && listenMode;
+  var isValidCmdUdp = cmdUdpRe.test(message) && listenMode;
+
+  if (isValidCmdHello) {
     bot.say('#hsnl.bots', 'Hello there ' + from);
 
-  } else if (message.match(/^\!sysinfo$/) && listenMode) {
+  } else if (isValidCmdSysinfo) {
     var totalMem = os.totalmem() / (2 << 19);
     var freeMem =  os.freemem() / (2 << 19);
     var upTime =  formatUtils.secondsToString(os.uptime());
@@ -52,16 +74,18 @@ bot.addListener('message#hsnl.bots', function(from, message) {
 
     bot.say('#hsnl.bots', sysInfo);
 
-  } else if (message.match(/^\!netinfo$/) && listenMode) {
+  } else if (isValidCmdNetinfo) {
     var upNetworkInterfaces = Object.keys(os.networkInterfaces()).toString();
 
     bot.say('#hsnl.bots', 'IP address: ' + iputils.address());
 
-  } else if (message.match(/^\!scan (.*?) (.*?)$/)) {
-    var matched = /^\!scan (.*?) (.*?)$/.exec(message);
+  } else if (isValidCmdScan) {
+    var matchedCmdScan = message.match(cmdScanRe);
 
-    var port = matched[2];
-    var ip =  matched[1];
+    // var matched = cmdScanRe.exec(message);
+
+    var port = matchedCmdScan[2];
+    var ip =  matchedCmdScan[1];
 
     portscanner.checkPortStatus(port, ip, function(error, status) {
       if (error) {
@@ -70,17 +94,20 @@ bot.addListener('message#hsnl.bots', function(from, message) {
       }
 
       bot.say('#hsnl.bots',
-        ip + ':' + matched[2] + ' Port status: ' + status
+        ip + ':' + port + ' Port status: ' + status
       );
     });
 
-  } else if (message.match(/^\!download (.*?) (.*?) (.*?)$/) && listenMode) {
-    var matched = /^\!download (.*?) (.*?) (.*?)$/.exec(message);
-    console.log(matched);
+  } else if (isValidCmdDownload) {
+    // var matched = cmdDownloadRe.exec(message);
 
-    var action = matched[3];
-    var output =  matched[2] ;
-    var url = matched[1];
+    var matchedCmdDownload = message.match(cmdDownloadRe);
+
+    console.log(matchedCmdDownload);
+
+    var action = matchedCmdDownload[3];
+    var output =  matchedCmdDownload[2] ;
+    var url = matchedCmdDownload[1];
 
     var download = wget.download(url, output);
 
@@ -94,13 +121,15 @@ bot.addListener('message#hsnl.bots', function(from, message) {
       console.log(output);
       bot.say('#hsnl.bots', 'Save to ' + output);
     });
-  } else if (message.match(/^\!about$/) && listenMode) {
+  } else if (isValidCmdAbout) {
     bot.say('#hsnl.bots',
-      'nbot version ' + VERSION + ' by [John-Lin] (linton.tw@gmail.com).'
+      'nbot version ' + VERSION + ' by [John-Lin] (linton.tw@gmail.com). ' + 'repository: https://github.com/John-Lin/Node-Bot'
     );
-  } else if (message.match(/^\!dns (.*?)$/) && listenMode) {
-    var matched = /^\!dns (.*?)$/.exec(message);
-    var host = matched[1];
+  } else if (isValidCmdDns) {
+    // var matched = cmdDnsRe.exec(message);
+    var matchedCmdDns = message.match(cmdDnsRe);
+
+    var host = matchedCmdDns[1];
     dns.lookup(host, function(err, ip, fam) {
       if (err) {
         bot.say('#hsnl.bots', 'Error message: ' + err);
@@ -109,14 +138,17 @@ bot.addListener('message#hsnl.bots', function(from, message) {
 
       bot.say('#hsnl.bots', ip);
     });
-  } else if (message.match(/^\!udp (.*?) (.*?) (.*?)$/) && listenMode) {
-    var matched = /^\!udp (.*?) (.*?) (.*?)$/.exec(message);
+  } else if (isValidCmdUdp) {
+    var matchedCmdUdp = message.match(cmdUdpRe);
 
-    var pktSize = parseInt(matched[3], 10);
-    var pktNum =  parseInt(matched[2], 10);
-    var host = matched[1];
+    // var matched = cmdUdpRe.exec(message);
 
-    if (isNaN(pktSize) || isNaN(pktNum) || !netUtils.isIPv4(host)) {
+    var pktSize = parseInt(matchedCmdUdp[3], 10);
+    var pktNum =  parseInt(matchedCmdUdp[2], 10);
+    var host = matchedCmdUdp[1];
+    var isInvalidParam = isNaN(pktSize) || isNaN(pktNum) || !netUtils.isIPv4(host);
+
+    if (isInvalidParam) {
       bot.say('#hsnl.bots', 'Invalid parameters.');
       return
     }
